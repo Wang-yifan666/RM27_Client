@@ -1,0 +1,52 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const m = require('../server/static/tgul_map_geometry.js');
+
+const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
+
+test('3:2 court remains proportional inside a 16:9 canvas', () => {
+    const v = m.view(12, 8, 800, 450);
+    near(v.left, 62.5);
+    near(v.top, 0);
+    near(v.width, 675);
+    near(v.height, 450);
+    near(v.scale, 56.25);
+});
+
+test('world coordinates map to canvas and back at corners and center', () => {
+    for (const [x, y] of [[0,0],[12,0],[0,8],[12,8],[6,4],[2.2,7.1]]) {
+        const p = m.worldToCanvas(x, y, 12, 8, 800, 450);
+        const inverse = m.canvasToWorld(p.x, p.y, 12, 8, 800, 450);
+        near(inverse.x, x);
+        near(inverse.y, y);
+        assert.equal(inverse.inside, true);
+    }
+});
+
+test('letterbox is not part of the field', () => {
+    assert.equal(m.canvasToWorld(20,225,12,8,800,450).inside, false);
+    assert.equal(m.canvasToWorld(780,225,12,8,800,450).inside, false);
+    assert.equal(m.canvasToWorld(62.5,450,12,8,800,450).inside, true);
+});
+
+test('path plan uses centered court with padding', () => {
+    const v=m.view(12,8,280,150,10);
+    near(v.left,42.5);
+    near(v.top,10);
+    near(v.width,195);
+    near(v.height,130);
+    const p=m.worldToCanvas(12,8,12,8,280,150,10);
+    near(p.x,237.5);
+    near(p.y,10);
+});
+
+test('invalid sizes and padding fail early', () => {
+    for (const values of [
+        [0,8,800,450],[-12,8,800,450],
+        [NaN,8,800,450],[12,Infinity,800,450],
+        [12,8,0,450],[12,8,800,450,400],
+        [12,8,800,450,-1]
+    ]) {
+        assert.throws(() => m.view(...values), RangeError);
+    }
+});

@@ -1,0 +1,12 @@
+{
+  "width_m": null,
+  "height_m": null,
+  "calibrated": false,
+  "crop": [
+    0,
+    0,
+    1,
+    1
+  ],
+  "source": "Unset. Measure the 1v1 court from its STEP/rulebook before enabling metric positions."
+}
