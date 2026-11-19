@@ -153,6 +153,53 @@ class TGUL2027IntegrationTest(unittest.TestCase):
         self.assertEqual(manager.get_state()["globalUnitStatus"]["robot_health"][1], 350)
         self.assertEqual(manager.get_state()["gameStatus"]["current_stage"], 0)
 
+    def test_demo_robots_move_and_stay_inside_the_map(self):
+        """快速演示与完整赛事都必须真的推进位置，且不越出 12x8 场地。"""
+        for mode, total in (("quick", 90.0), ("full", 500.0)):
+            with self.subTest(mode=mode):
+                clock = FakeClock()
+                manager = TGULStateManager("tgul_3v3")
+                engine = TGULMatchSimulationEngine(manager, clock=clock)
+                engine.control("start", mode=mode)
+                state = manager.get_state()
+                ids = state["robotIds"]
+                active = set(state["tgulActiveRobotIds"])
+                homes = [dict(pose) for pose in state["positions"]]
+
+                samples = []
+                for fraction in (0.1, 0.35, 0.6, 0.85):
+                    clock.set(total * fraction)
+                    engine.tick()
+                    samples.append(
+                        [dict(pose) for pose in manager.get_state()["positions"]]
+                    )
+
+                for index, robot_id in enumerate(ids):
+                    xs = [s[index]["x"] for s in samples]
+                    ys = [s[index]["y"] for s in samples]
+                    with self.subTest(mode=mode, robot=robot_id):
+                        self.assertTrue(all(0 <= v <= 12 for v in xs))
+                        self.assertTrue(all(0 <= v <= 8 for v in ys))
+                        if robot_id in active:
+                            self.assertGreater(
+                                len(set(zip(xs, ys))), 1,
+                                f"robot {robot_id} never moved",
+                            )
+                        else:
+                            # 未上场的替补保持出生点不动。
+                            self.assertEqual(xs, [homes[index]["x"]] * len(xs))
+                            self.assertEqual(ys, [homes[index]["y"]] * len(ys))
+
+    def test_disabling_positions_feature_freezes_robots(self):
+        clock = FakeClock()
+        manager = TGULStateManager("tgul_3v3")
+        engine = TGULMatchSimulationEngine(manager, clock=clock)
+        engine.control("start", mode="quick", features={"positions": False})
+        before = [dict(pose) for pose in manager.get_state()["positions"]]
+        clock.set(45)
+        engine.tick()
+        self.assertEqual(manager.get_state()["positions"], before)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -3,6 +3,8 @@
 This is a Web-side integration milestone, NOT an official TGUL MQTT implementation.
 The older application keeps eight display slots; infantry duel uses only 3/103.
 """
+import math
+import random
 import threading
 
 from server.match_simulation_engine import MatchSimulationEngine
@@ -271,6 +273,13 @@ class TGULMatchSimulationEngine(MatchSimulationEngine):
             state_manager, mqtt_publisher=mqtt_publisher,
             clock=clock, seed=seed,
         )
+        # 巡逻围绕出生点展开；initial_demo_positions 已按真实场地算好。
+        ids = list(state_manager.robot_ids)
+        homes = initial_demo_positions(state_manager.tgul_mode, ids)
+        self._home_positions = (
+            homes if homes
+            else [dict(pose) for pose in state_manager.get_positions()]
+        )
 
     def _timeline_state(self):
         if self._status == "idle" or (
@@ -303,12 +312,75 @@ class TGULMatchSimulationEngine(MatchSimulationEngine):
             battle_progress,
         )
 
+    def _make_path_profiles(self):
+        """按真实场地尺寸生成巡逻参数；种子固定，演示可复现。"""
+        rng = random.Random(self.seed)
+        width_m, height_m = self.state_manager._simulation_field_size_m()
+        profiles = []
+        for _ in range(len(self.state_manager.robot_ids)):
+            profiles.append(
+                {
+                    "phase": rng.uniform(0.0, math.tau),
+                    "frequency": rng.uniform(1.35, 2.2),
+                    # 幅度按场地比例给，保证不会把机器人推出边界。
+                    "x_amplitude": rng.uniform(0.10, 0.18) * width_m,
+                    "y_amplitude": rng.uniform(0.05, 0.10) * height_m,
+                }
+            )
+        return profiles
+
+    def _build_positions(self, battle_progress):
+        """各机器人在出生点附近小幅巡逻；替补原地不动，坐标始终在场地内。"""
+        rules = get_match_rules(self.state_manager.tgul_mode)
+        width_m, height_m = self.state_manager._simulation_field_size_m()
+        elapsed = battle_progress * rules.battle_sec
+        ids = list(self.state_manager.robot_ids)
+        active = set(self.state_manager.active_robot_ids)
+        margin = 0.45
+        positions = []
+        for index, robot_id in enumerate(ids):
+            home = self._home_positions[index]
+            if robot_id not in active:
+                positions.append(
+                    {
+                        "x": round(home["x"], 3),
+                        "y": round(home["y"], 3),
+                        "angle": round(float(home["angle"]) % 360.0, 2),
+                    }
+                )
+                continue
+            profile = self._path_profiles[index]
+            rate = math.tau * profile["frequency"] / 90.0
+            theta = elapsed * rate + profile["phase"]
+            x = home["x"] + profile["x_amplitude"] * math.cos(theta)
+            y = home["y"] + profile["y_amplitude"] * math.sin(theta * 0.73)
+            dx = -profile["x_amplitude"] * rate * math.sin(theta)
+            dy = profile["y_amplitude"] * 0.73 * rate * math.cos(theta * 0.73)
+            if abs(dx) + abs(dy) > 1e-9:
+                # 渲染端把机头方向定义为 (cos(angle-90), sin(angle-90))。
+                angle = (90.0 + math.degrees(math.atan2(-dy, dx))) % 360.0
+            else:
+                angle = float(home["angle"])
+            positions.append(
+                {
+                    "x": round(max(margin, min(width_m - margin, x)), 3),
+                    "y": round(max(margin, min(height_m - margin, y)), 3),
+                    "angle": round(angle % 360.0, 2),
+                }
+            )
+        return positions
+
     def _apply_current_frame(self, publish_radar):
-        # Do not fabricate legacy hero/dart/outpost events, HP or radar data.
-        stage, countdown, elapsed, _, _ = self._timeline_state()
+        # 不伪造旧版的英雄/飞镖/前哨站事件、HP 与雷达数据；位置按 TGUL 场地推进。
+        stage, countdown, elapsed, _, battle_progress = self._timeline_state()
         status = self.get_status()
+        positions = (
+            self._build_positions(battle_progress)
+            if self._features.get("positions", True)
+            else None
+        )
         self.state_manager.apply_match_simulation_frame(
-            positions=None,
+            positions=positions,
             robot_health=None,
             current_stage=stage,
             stage_countdown_sec=countdown,
