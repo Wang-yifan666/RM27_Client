@@ -108,7 +108,7 @@ sim/server/
 | MQTT | topic、QoS、机器人 ID、双向命令和重连测试 |
 | Protobuf | descriptor 对比、Python/C++ golden payload |
 | UDP | 两种帧格式的字节级 fixture 与 CRC 用例 |
-| 地图 | Node 几何测试和常用分辨率 |
+| 地图 | Node 几何测试和常用分辨率；区域数据与实施计划见 [TGUL 3V3 区域审计](tgul-3v3-zones.md) |
 | 视频 | 固定短样本、启动/停止和无输入退出测试 |
 
 安装和启动方法见 [sim/README.md](../../sim/README.md)。
