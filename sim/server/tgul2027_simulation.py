@@ -66,6 +66,11 @@ class TGULStateManager(StateManager):
         demo_positions = initial_demo_positions(self.tgul_mode, ids)
         if demo_positions:
             self.positions = demo_positions
+            # reset_match_simulation() 会用 _initial_positions 复原位置；不同步的话
+            # 每次重置都会退回父类的 28x15 旧默认坐标，蓝方跑到 17-26 m 被前端丢弃。
+            self._initial_positions = [
+                dict(position) for position in demo_positions
+            ]
 
         # Keep the eight Web display slots; inactive slots are deliberately zero.
         specs = {
