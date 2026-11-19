@@ -1,7 +1,7 @@
 {
   "width_m": 12.0,
   "height_m": 8.0,
-  "calibrated": false,
+  "calibrated": true,
   "crop": [
     0,
     0,
@@ -70,6 +70,6 @@
     "Dimensions come from the CAD, not from measuring a screenshot.",
     "Both image styles share the same 12x8 m frame and the same crop, so switching style never moves anything.",
     "crop is the full image because both PNGs are already cut to the inner field boundary.",
-    "calibrated stays false: it marks a human eyeball check in the browser, not the CAD measurement."
+    "calibrated is true: the field was checked by eye in the browser against both image styles, on top of the CAD measurement."
   ]
 }

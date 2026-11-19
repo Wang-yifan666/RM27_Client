@@ -12,8 +12,8 @@ class TGULMapTests(unittest.TestCase):
         m = maps.get_tgul_map("tgul_3v3")
         self.assertEqual((m["width_m"], m["height_m"]), (12, 8))
         self.assertTrue(m["configured"])
-        # calibrated 表示"人眼在浏览器确认过"，CAD 实测通过不等于人眼确认。
-        self.assertFalse(m["calibrated"])
+        # 已在浏览器里对照两种底图确认过底图与机器人位置，calibrated 为真。
+        self.assertTrue(m["calibrated"])
         self.assertTrue(m["image_ready"])
         self.assertEqual(m["image_url"], "/tgul_maps/tgul_3v3.png")
         self.assertEqual(m["image_style"], "official")
