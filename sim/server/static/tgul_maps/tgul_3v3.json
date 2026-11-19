@@ -8,5 +8,68 @@
     1,
     1
   ],
-  "source": "Provisional 12x8 m field; confirm dimensions and orientation against official STEP and rulebook."
+  "default_image_style": "official",
+  "image_styles": [
+    {
+      "id": "official",
+      "label": "官方纹理",
+      "file": "tgul_3v3.png",
+      "note": "规则手册第 23 页俯视纹理，按内场边界裁切后重采样到 1500x1000，含烘焙阴影与官方地面标识"
+    },
+    {
+      "id": "cad",
+      "label": "CAD 配色",
+      "file": "tgul_3v3_cad.png",
+      "note": "STEP 三角化几何正交投影，按实测高度分级配色；几何与官方纹理版一致，便于看清墙体和隧道形体"
+    }
+  ],
+  "source": "RMUL2027_3V3_V1.0.0.stp (Creo AP214, exported 2026-09-22): inner field 12000 x 8000 mm measured from the CAD wall faces; outer frame 12600 x 8600 mm, wall thickness 300 mm, wall top 420 mm.",
+  "source_file": "RMUL2027_3V3_V1.0.0.stp",
+  "source_model": "00_RMUL_2027_3V3_STU_V100",
+  "source_sha256": "7d47c1b6a6a0253a732e46cb122bb84410b11d5134bcb5658104299db4a48ca4",
+  "image_size_px": [
+    1500,
+    1000
+  ],
+  "orientation": {
+    "origin": "bottom-left corner of the inner field",
+    "x": "right on the image, east",
+    "y": "up on the image, north",
+    "image_row_0": "y = 8.0 m (north)",
+    "image_column_0": "x = 0.0 m (west)",
+    "cad_transform": "sim_x = (6000 - CAD_X) / 1000, sim_y = (4000 - CAD_Z) / 1000, height = -CAD_Y / 1000",
+    "cad_up_axis": "-Y",
+    "red_base": "north-west; the red AP214 marking measures x 0.92-1.56 m, y 6.65-7.33 m at floor level",
+    "blue_base": "south-east; the blue AP214 marking measures x 10.44-11.08 m, y 0.67-1.35 m at floor level",
+    "mirrored": false
+  },
+  "geometry": {
+    "inner_field_mm": [
+      12000,
+      8000
+    ],
+    "outer_field_mm": [
+      12600,
+      8600
+    ],
+    "wall_thickness_mm": 300,
+    "wall_top_mm": 420,
+    "highland_mm": [
+      2000,
+      4060,
+      200
+    ],
+    "central_control_zone_mm": [
+      3000,
+      3000,
+      10
+    ],
+    "tunnel_clearance_mm": 249.5
+  },
+  "notes": [
+    "Dimensions come from the CAD, not from measuring a screenshot.",
+    "Both image styles share the same 12x8 m frame and the same crop, so switching style never moves anything.",
+    "crop is the full image because both PNGs are already cut to the inner field boundary.",
+    "calibrated stays false: it marks a human eyeball check in the browser, not the CAD measurement."
+  ]
 }

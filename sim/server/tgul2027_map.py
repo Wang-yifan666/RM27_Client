@@ -16,6 +16,62 @@ VALID_MODES = {
 }
 
 
+def _resolve_image_styles(data: dict, mode_key: str, image_file: str) -> tuple[list[dict], str]:
+    """Return the switchable background styles and the default one.
+
+    A config without an ``image_styles`` table keeps the original single-image
+    behaviour, so a not-yet-calibrated map needs no extra fields.
+    """
+    raw = data.get("image_styles")
+    if raw is None:
+        return (
+            [{"id": "default", "label": "默认底图", "file": image_file, "note": ""}],
+            "default",
+        )
+    if not isinstance(raw, list) or not raw:
+        raise ValueError(f"image_styles must be a non-empty list in {mode_key}.json")
+    styles: list[dict] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            raise ValueError(f"Invalid image_styles entry in {mode_key}.json")
+        style_id = str(item.get("id") or "").strip()
+        file_name = str(item.get("file") or "").strip()
+        if not style_id or not file_name:
+            raise ValueError(f"image_styles entry needs both id and file in {mode_key}.json")
+        if "/" in file_name or "\\" in file_name or file_name.startswith("."):
+            raise ValueError(
+                f"image_styles file must be a bare filename in {mode_key}.json: {file_name}"
+            )
+        styles.append(
+            {
+                "id": style_id,
+                "label": str(item.get("label") or style_id),
+                "file": file_name,
+                "note": str(item.get("note") or ""),
+            }
+        )
+    if len({style["id"] for style in styles}) != len(styles):
+        raise ValueError(f"Duplicate image_styles id in {mode_key}.json")
+    default_style = str(data.get("default_image_style") or styles[0]["id"])
+    if default_style not in {style["id"] for style in styles}:
+        raise ValueError(
+            f"default_image_style {default_style} is not declared in {mode_key}.json"
+        )
+    return styles, default_style
+
+
+def _public_style(style: dict) -> dict:
+    """Describe one style for the Web console; a missing file stays explicitly unavailable."""
+    available = (MAP_DIR / style["file"]).is_file()
+    return {
+        "id": style["id"],
+        "label": style["label"],
+        "note": style["note"],
+        "available": available,
+        "url": f"/tgul_maps/{style['file']}" if available else None,
+    }
+
+
 def get_tgul_map(mode: str) -> dict:
     """Return JSON-safe map metadata; unconfigured maps remain explicitly blank."""
     key = str(getattr(mode, "value", mode))
@@ -41,7 +97,11 @@ def get_tgul_map(mode: str) -> dict:
         or not (0 <= crop[0] < crop[2] <= 1 and 0 <= crop[1] < crop[3] <= 1)
     ):
         raise ValueError(f"Invalid crop [left,top,right,bottom] in {config_file}")
-    image_ready = (MAP_DIR / image_file).is_file()
+
+    styles, default_style = _resolve_image_styles(data, key, image_file)
+    image_styles = [_public_style(style) for style in styles]
+    default_entry = next(s for s in image_styles if s["id"] == default_style)
+    image_ready = default_entry["available"]
     return {
         "mode": key,
         "width_m": width,
@@ -49,7 +109,9 @@ def get_tgul_map(mode: str) -> dict:
         "configured": configured,
         "calibrated": bool(data.get("calibrated", False)) and configured and image_ready,
         "image_ready": image_ready,
-        "image_url": f"/tgul_maps/{image_file}" if image_ready else None,
+        "image_url": default_entry["url"],
+        "image_style": default_style,
+        "image_styles": image_styles,
         "crop": list(crop),
         "source": str(data.get("source", "")),
     }

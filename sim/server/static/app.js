@@ -531,6 +531,8 @@ if (!hasSocketIo || !hasVue) {
         tgulMode: null,
         tgulMap: null,
         tgulActiveRobotIds: [],
+        tgulImageStyles: [],
+        tgulImageStyle: '',
         videos: [],
         selectedVideo: '',
         customVideoUrl: '',
@@ -802,24 +804,61 @@ if (!hasSocketIo || !hasVue) {
             }
             if (this.canvas) this.canvas.style.backgroundImage = 'none';
             if (this.pathPlanCanvas) this.pathPlanCanvas.style.backgroundImage = 'none';
-            const url = config && config.image_url ? config.image_url : '';
-            if (this._tgulMapUrl === url) return;
-            this._tgulMapUrl = url;
+            // 只保留服务端确认存在的风格，缺图的风格不会出现在下拉框里。
+            this.tgulImageStyles = Array.isArray(config && config.image_styles)
+                ? config.image_styles.filter(style => style && style.available && style.url)
+                : [];
+            this.setTGULMapImage(this.resolveTGULMapImageUrl(config));
+        },
+        // 操作手上次选过的风格优先，其次是服务端默认值，最后退回第一项。
+        resolveTGULMapImageUrl(config) {
+            const styles = this.tgulImageStyles;
+            let saved = '';
+            try {
+                saved = localStorage.getItem(`tgulMapStyle:${this.tgulMode}`) || '';
+            } catch (err) {
+                saved = '';
+            }
+            const candidates = [saved, config && config.image_style,
+                styles.length ? styles[0].id : ''];
+            const chosen = candidates
+                .map(id => (id ? styles.find(style => style.id === id) : undefined))
+                .find(Boolean);
+            this.tgulImageStyle = chosen ? chosen.id : '';
+            if (chosen) return chosen.url || '';
+            return config && config.image_url ? config.image_url : '';
+        },
+        // 只替换背景位图；缩放、裁切和拖拽坐标仍由 TGULMapGeometry 统一计算。
+        setTGULMapImage(url) {
+            const target = url || '';
+            if (this._tgulMapUrl === target) return;
+            this._tgulMapUrl = target;
             this._tgulImage = null;
-            if (!url) return;
+            if (!target) return;
             const img = new Image();
             img.onload = () => {
-                if (this._tgulMapUrl !== url) return;
+                if (this._tgulMapUrl !== target) return;
                 this._tgulImage = img;
                 this.drawMinimap();
                 this.drawRobotPathPlanCanvas();
             };
             img.onerror = () => {
-                if (this._tgulMapUrl !== url) return;
+                if (this._tgulMapUrl !== target) return;
                 this._tgulImage = null;
                 this.drawMinimap();
             };
-            img.src = url;
+            img.src = target;
+        },
+        selectTGULMapStyle(styleId) {
+            const style = this.tgulImageStyles.find(item => item.id === styleId);
+            if (!style) return;
+            this.tgulImageStyle = style.id;
+            try {
+                localStorage.setItem(`tgulMapStyle:${this.tgulMode}`, style.id);
+            } catch (err) {
+                // 隐私模式下拿不到 localStorage：切换照样生效，只是不记忆。
+            }
+            this.setTGULMapImage(style.url || '');
         },
         drawTGULField(ctx, w, h, padding = 0) {
             ctx.fillStyle = '#0a1725';

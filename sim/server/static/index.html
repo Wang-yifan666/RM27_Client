@@ -131,7 +131,13 @@
                         </div>
                         <div class="minimap-hint-row">
                             <span class="minimap-hint">左下角为场地坐标原点</span>
-                            <span v-if="tgulMode" class="minimap-hint">TGUL {{ tgulMode }} · {{ tgulMap && tgulMap.calibrated ? "场地已标定" : "场地未标定，仅供演示" }}</span>
+                            <span v-if="tgulMode" class="minimap-hint">TGUL {{ tgulMode }} · {{ mapWidth }}×{{ mapHeight }} m</span>
+                            <label v-if="tgulMode && tgulImageStyles.length > 1" class="minimap-hint minimap-style-picker">
+                                地图风格
+                                <select v-model="tgulImageStyle" @change="selectTGULMapStyle(tgulImageStyle)">
+                                    <option v-for="style in tgulImageStyles" :key="style.id" :value="style.id">{{ style.label }}</option>
+                                </select>
+                            </label>
                             <span class="minimap-hint">支持窗口与全屏精确拖拽</span>
                             <span v-if="simulationManualOverride" class="minimap-hint manual-override">已手动接管，点击“继续”恢复演示</span>
                         </div>

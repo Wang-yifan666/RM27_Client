@@ -2361,3 +2361,19 @@ button.primary:disabled,
         transition-duration: 0.01ms !important;
     }
 }
+
+.minimap-style-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.minimap-style-picker select {
+    padding: 0.22rem 0.4rem;
+    border-radius: 6px;
+    background: rgba(12, 20, 33, 0.92);
+    border: 1px solid rgba(160, 190, 240, 0.24);
+    color: #cdd8f2;
+    font-size: 0.86rem;
+    cursor: pointer;
+}
