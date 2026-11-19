@@ -807,10 +807,19 @@ if (!hasSocketIo || !hasVue) {
             if (this.canvas) this.canvas.style.backgroundImage = 'none';
             if (this.pathPlanCanvas) this.pathPlanCanvas.style.backgroundImage = 'none';
             // 只保留服务端确认存在的风格，缺图的风格不会出现在下拉框里。
-            this.tgulImageStyles = Array.isArray(config && config.image_styles)
+            // 状态每秒推 10 次，这里用签名短路，避免每帧重建数组并读 localStorage。
+            const styles = Array.isArray(config && config.image_styles)
                 ? config.image_styles.filter(style => style && style.available && style.url)
                 : [];
-            this.setTGULMapImage(this.resolveTGULMapImageUrl(config));
+            const signature = [
+                config && config.image_url ? config.image_url : '',
+                ...styles.map(style => `${style.id}|${style.url}`)
+            ].join(',');
+            if (signature !== this._tgulStyleSignature) {
+                this._tgulStyleSignature = signature;
+                this.tgulImageStyles = styles;
+                this.setTGULMapImage(this.resolveTGULMapImageUrl(config));
+            }
         },
         // 操作手上次选过的风格优先，其次是服务端默认值，最后退回第一项。
         resolveTGULMapImageUrl(config) {

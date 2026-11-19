@@ -348,12 +348,19 @@ class TGULMatchSimulationEngine(MatchSimulationEngine):
         margin = 0.45
         positions = []
         for index, robot_id in enumerate(ids):
-            home = self._home_positions[index]
+            home = (
+                self._home_positions[index]
+                if index < len(self._home_positions)
+                else {"x": width_m / 2, "y": height_m / 2, "angle": 0.0}
+            )
+            # 出生点可能是旧 28x15 坐标系（1v1 尚未标定时），先夹进当前场地。
+            center_x = max(margin, min(width_m - margin, float(home["x"])))
+            center_y = max(margin, min(height_m - margin, float(home["y"])))
             if robot_id not in active:
                 positions.append(
                     {
-                        "x": round(home["x"], 3),
-                        "y": round(home["y"], 3),
+                        "x": round(center_x, 3),
+                        "y": round(center_y, 3),
                         "angle": round(float(home["angle"]) % 360.0, 2),
                     }
                 )
@@ -361,16 +368,26 @@ class TGULMatchSimulationEngine(MatchSimulationEngine):
             profile = self._path_profiles[index]
             rate = math.tau * profile["frequency"] / self.PATROL_CYCLE_SEC
             phase = profile["phase"]
+            # 幅度再按出生点到两侧边界的余量收紧：否则振幅超过余量时会被下面
+            # 的钳制按在边界上，表现出来是“走到墙边停一会儿再走”。
+            # 注意 (cos(theta) - cos(phase)) 的取值范围是 ±2，实际摆幅是幅度的
+            # 两倍；所以要按到边界余量的一半取，才不会把机器人顶到钳制线上。
+            room_x = min(
+                center_x - margin, width_m - margin - center_x
+            )
+            room_y = min(
+                center_y - margin, height_m - margin - center_y
+            )
+            amp_x = max(0.0, min(profile["x_amplitude"], room_x / 2.0))
+            amp_y = max(0.0, min(profile["y_amplitude"], room_y / 2.0))
             theta = elapsed * rate + phase
             # 减掉 t=0 时的偏移，让演示启动瞬间位置正好等于出生点，不会跳一下。
-            x = home["x"] + profile["x_amplitude"] * (
-                math.cos(theta) - math.cos(phase)
-            )
-            y = home["y"] + profile["y_amplitude"] * (
+            x = center_x + amp_x * (math.cos(theta) - math.cos(phase))
+            y = center_y + amp_y * (
                 math.sin(theta * 0.73) - math.sin(phase * 0.73)
             )
-            dx = -profile["x_amplitude"] * rate * math.sin(theta)
-            dy = profile["y_amplitude"] * 0.73 * rate * math.cos(theta * 0.73)
+            dx = -amp_x * rate * math.sin(theta)
+            dy = amp_y * 0.73 * rate * math.cos(theta * 0.73)
             if abs(dx) + abs(dy) > 1e-9:
                 # 渲染端把机头方向定义为 (cos(angle-90), sin(angle-90))。
                 angle = (90.0 + math.degrees(math.atan2(-dy, dx))) % 360.0

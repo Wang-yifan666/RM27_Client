@@ -241,6 +241,50 @@ class TGUL2027IntegrationTest(unittest.TestCase):
                 )
                 self.assertEqual(moved, 6)
 
+    def test_patrol_amplitude_never_pins_against_the_border(self):
+        """摆幅必须小于到边界的余量，否则会被钳制在边界上、看起来停住不动。
+
+        回归：cos(theta)-cos(phase) 的范围是 ±2，早期按余量直接取幅度，实际
+        摆幅翻倍，机器人贴边静止（快速演示中机器人 1 有 91 帧不动）。
+        """
+        clock = FakeClock()
+        manager = TGULStateManager("tgul_3v3")
+        engine = TGULMatchSimulationEngine(manager, clock=clock)
+        engine.control("start", mode="quick")
+        state = manager.get_state()
+        ids = state["robotIds"]
+        active = set(state["tgulActiveRobotIds"])
+
+        previous = None
+        streak = {rid: 0 for rid in ids}
+        worst = {rid: 0 for rid in ids}
+        for step in range(300):
+            clock.set(step / 10.0)
+            engine.tick()
+            positions = manager.get_state()["positions"]
+            current = {
+                rid: (positions[index]["x"], positions[index]["y"])
+                for index, rid in enumerate(ids)
+            }
+            for rid in ids:
+                if rid not in active:
+                    continue
+                if previous is not None and previous[rid] == current[rid]:
+                    streak[rid] += 1
+                    worst[rid] = max(worst[rid], streak[rid])
+                else:
+                    streak[rid] = 0
+            previous = current
+
+        for rid in ids:
+            if rid not in active:
+                continue
+            with self.subTest(robot=rid):
+                self.assertLessEqual(
+                    worst[rid], 3,
+                    f"robot {rid} 连续 {worst[rid]} 帧完全静止（疑似被边界钳制）",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
