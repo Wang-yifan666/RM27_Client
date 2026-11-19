@@ -501,7 +501,7 @@ if (!hasSocketIo || !hasVue) {
             elapsed: 0,
             remaining: 90,
             duration: 90,
-            message: '选择演示模式后即可一键启动',
+            message: '',
             recentEvents: [],
             lastFrameAt: ''
         },
