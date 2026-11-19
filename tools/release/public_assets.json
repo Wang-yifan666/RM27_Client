@@ -99,8 +99,8 @@
       "status": "approved",
       "evidence": "ASSET_LICENSES.md",
       "snapshot": {
-        "file_count": 4,
-        "sha256": "937f98261867d7e65fb9faaa6bd6032c709f739acf2ddb2e90dcd13cd9f5ac16"
+        "file_count": 5,
+        "sha256": "cb43c695fe912551fcde498382b4cb49e355d9e835c4112b6a27e807a2811a6c"
       }
     }
   ]

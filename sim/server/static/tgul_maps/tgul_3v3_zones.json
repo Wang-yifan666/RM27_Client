@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "map": "tgul_3v3",
+  "coordinate_system": {
+    "unit": "m",
+    "origin": "inner-field south-west corner",
+    "x": "east, 0..12",
+    "y": "north, 0..8",
+    "frame": [0.0, 0.0, 12.0, 8.0],
+    "validation_bounds": [-0.5, -0.5, 12.5, 8.5],
+    "image_convention": "pixel row 0 = y=8.0 (north); column 0 = x=0.0 (west)"
+  },
+  "source": {
+    "file": "RMUL2027_3V3_V1.0.0.stp",
+    "sha256": "7d47c1b6a6a0253a732e46cb122bb84410b11d5134bcb5658104299db4a48ca4",
+    "model": "00_RMUL_2027_3V3_STU_V100",
+    "method": "step_faces.py 面级多边形重建 + diag_bands.py 高度分层",
+    "records": ["recon_3v3.txt", "bands.txt", "markers3d.txt"]
+  },
+  "status_vocabulary": {
+    "measured": "轮廓来自 STEP 面，可直接参与点包含判定",
+    "aabb_only": "只有包围盒；真实轮廓待提取，不得据此禁止位置",
+    "pending": "尚无官方测量，仅占位"
+  },
+  "zones": [
+    {
+      "id": "field.inner",
+      "kind": "playable_frame",
+      "label": "内场可行驶区",
+      "status": "measured",
+      "blocks_motion": false,
+      "polygon": [[0.0, 0.0], [12.0, 0.0], [12.0, 8.0], [0.0, 8.0]],
+      "evidence": "bands.txt z=0 地面面；围墙顶环实测 12.360 m2 = 12.6x8.6 - 12x8，三者互证"
+    },
+    {
+      "id": "obstacle.perimeter_wall",
+      "kind": "obstacle",
+      "label": "四周围挡",
+      "status": "measured",
+      "blocks_motion": true,
+      "z_mm": 420,
+      "polygon": [[-0.3, -0.3], [12.3, -0.3], [12.3, 8.3], [-0.3, 8.3]],
+      "holes": [[[0.0, 0.0], [0.0, 8.0], [12.0, 8.0], [12.0, 0.0]]],
+      "evidence": "外框 12.6x8.6、内框 12x8、壁厚 0.3、顶高 420mm；环面积 12.360 m2 与实测面一致。位于内场之外，位置校验另有 frame 钳制"
+    },
+    {
+      "id": "control.central",
+      "kind": "control_zone",
+      "label": "中央 3x3 控制区",
+      "status": "measured",
+      "blocks_motion": false,
+      "z_mm": 7,
+      "polygon": [[4.5, 2.5], [7.5, 2.5], [7.5, 5.5], [4.5, 5.5]],
+      "evidence": "bands.txt z=7mm 面 9.000 m2，与 3.0x3.0 AABB 面积完全相等"
+    },
+    {
+      "id": "terrain.tunnel_se",
+      "kind": "terrain",
+      "label": "东南侧隧道下薄面",
+      "status": "measured",
+      "blocks_motion": false,
+      "z_mm": 0.5,
+      "polygon": [[7.5, 0.14], [9.5, 0.14], [9.5, 0.94], [7.5, 0.94]],
+      "evidence": "bands.txt z=0.5mm 面 1.600 m2，与 2.0x0.8 AABB 面积完全相等"
+    },
+    {
+      "id": "terrain.tunnel_nw",
+      "kind": "terrain",
+      "label": "西北侧隧道下薄面",
+      "status": "measured",
+      "blocks_motion": false,
+      "z_mm": 0.5,
+      "polygon": [[2.5, 7.06], [4.5, 7.06], [4.5, 7.86], [2.5, 7.86]],
+      "evidence": "bands.txt z=0.5mm 面 1.600 m2，与 2.0x0.8 AABB 面积完全相等"
+    },
+    {
+      "id": "terrain.highland_se",
+      "kind": "terrain",
+      "label": "东南高地（可通行）",
+      "status": "aabb_only",
+      "blocks_motion": false,
+      "z_mm": 200,
+      "aabb": [7.5, 0.94, 9.5, 5.0],
+      "confirmed_by": "维护者确认允许上高地",
+      "evidence": "bands.txt z=200mm 面 6.350 m2 vs AABB 8.120 m2（78.2%），存在缺口，轮廓待提取"
+    },
+    {
+      "id": "terrain.highland_nw",
+      "kind": "terrain",
+      "label": "西北高地（可通行）",
+      "status": "aabb_only",
+      "blocks_motion": false,
+      "z_mm": 200,
+      "aabb": [2.5, 3.0, 4.5, 7.06],
+      "confirmed_by": "维护者确认允许上高地",
+      "evidence": "bands.txt z=200mm 面 6.350 m2 vs AABB 8.120 m2（78.2%），存在缺口，轮廓待提取"
+    },
+    {
+      "id": "terrain.supply_nw",
+      "kind": "terrain",
+      "label": "西北补给区地胶",
+      "status": "aabb_only",
+      "blocks_motion": false,
+      "z_mm": 3,
+      "aabb": [0.0, 6.0, 2.5, 8.0],
+      "evidence": "bands.txt z=3mm 面 4.512 m2 vs AABB 5.000 m2（90.2%），非矩形"
+    },
+    {
+      "id": "terrain.supply_se",
+      "kind": "terrain",
+      "label": "东南补给区地胶",
+      "status": "aabb_only",
+      "blocks_motion": false,
+      "z_mm": 3,
+      "aabb": [9.5, 0.0, 12.0, 2.0],
+      "evidence": "bands.txt z=3mm 面 4.512 m2 vs AABB 5.000 m2（90.2%），非矩形"
+    },
+    {
+      "id": "spawn.red_nw",
+      "kind": "base_marking",
+      "label": "红方出生点（西北角地贴）",
+      "status": "aabb_only",
+      "blocks_motion": false,
+      "aabb": [0.92, 6.65, 1.56, 7.33],
+      "confirmed_by": "维护者确认出生点在左上角（西北）",
+      "evidence": "markers3d.txt 红色面 69 点，z=0.002；地贴轮廓待提取"
+    },
+    {
+      "id": "spawn.blue_se",
+      "kind": "base_marking",
+      "label": "蓝方出生点（东南角地贴）",
+      "status": "aabb_only",
+      "blocks_motion": false,
+      "aabb": [10.44, 0.67, 11.08, 1.35],
+      "confirmed_by": "维护者确认出生点在右下角（东南）",
+      "evidence": "markers3d.txt 蓝色面 69 点，z=0.002；地贴轮廓待提取"
+    },
+    {
+      "id": "spawn.formations",
+      "kind": "base_marking",
+      "label": "官方出生站位与初始朝向",
+      "status": "pending",
+      "blocks_motion": null,
+      "polygon": null,
+      "evidence": "STEP 中不存在出生站位；需从官方规则手册录入，不得由地贴或底图推断"
+    }
+  ]
+}
