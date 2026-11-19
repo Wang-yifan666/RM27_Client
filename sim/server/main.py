@@ -984,7 +984,12 @@ async def broadcast_state():
     定期向 Web 控制台广播当前状态 (2Hz)
     """
     while True:
-        await sio.sleep(0.5)
+        # 演示运行时跟随引擎 10 Hz 节拍推送，画布上的移动才连续；
+        # 空闲时降到 2 Hz，省掉无意义的重复广播。
+        running = (
+            match_simulation_engine.get_status().get("status") == "running"
+        )
+        await sio.sleep(0.1 if running else 0.5)
         await sio.emit("update", _build_console_state())
 
 

@@ -200,6 +200,47 @@ class TGUL2027IntegrationTest(unittest.TestCase):
         engine.tick()
         self.assertEqual(manager.get_state()["positions"], before)
 
+    def test_demo_moves_from_the_first_second_not_only_in_battle(self):
+        """准备阶段 battle_progress 恒为 0，位置不能挂在它上面。
+
+        回归：位置曾用 battle_progress 驱动，快速演示前 36 秒、完整赛事前
+        200 秒画面上完全静止，看起来就是「不会动」。
+        """
+        for mode in ("quick", "full"):
+            with self.subTest(mode=mode):
+                clock = FakeClock()
+                manager = TGULStateManager("tgul_3v3")
+                engine = TGULMatchSimulationEngine(manager, clock=clock)
+                homes = [dict(pose) for pose in manager.get_state()["positions"]]
+
+                engine.control("start", mode=mode)
+                clock.set(0)
+                engine.tick()
+                state = manager.get_state()
+                # 启动瞬间坐标必须正好是出生点，不能跳一下；
+                # 朝向随运动方向，不强制等于出生朝向。
+                self.assertEqual(
+                    [(p["x"], p["y"]) for p in state["positions"]],
+                    [(p["x"], p["y"]) for p in homes],
+                )
+                self.assertEqual(engine._timeline_state()[0], MatchStage.PREPARATION)
+
+                clock.set(3)
+                engine.tick()
+                state = manager.get_state()
+                # 仍在准备阶段，但必须已经开始移动。
+                self.assertEqual(engine._timeline_state()[0], MatchStage.PREPARATION)
+                active = set(state["tgulActiveRobotIds"])
+                moved = sum(
+                    1
+                    for index, robot_id in enumerate(state["robotIds"])
+                    if robot_id in active
+                    and (state["positions"][index]["x"],
+                         state["positions"][index]["y"])
+                    != (homes[index]["x"], homes[index]["y"])
+                )
+                self.assertEqual(moved, 6)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -329,11 +329,20 @@ class TGULMatchSimulationEngine(MatchSimulationEngine):
             )
         return profiles
 
-    def _build_positions(self, battle_progress):
-        """各机器人在出生点附近小幅巡逻；替补原地不动，坐标始终在场地内。"""
-        rules = get_match_rules(self.state_manager.tgul_mode)
+    # 巡逻一圈的名义秒数：越小动得越快。按真实秒推进，因此快速演示和
+    # 完整赛事的观感速度一致，不会被各自的时长拉出 5 倍差距。
+    PATROL_CYCLE_SEC = 25.0
+
+    def _build_positions(self, elapsed_sec):
+        """各机器人在出生点附近小幅巡逻；替补原地不动，坐标始终在场地内。
+
+        elapsed_sec 是演示真实经过的秒数，不跟 battle_progress 走：演示的
+        准备/自检/倒计时阶段 battle_progress 恒为 0，快速模式前 36 秒、
+        完整赛事前 200 秒画面上会完全静止，看起来就是「不会动」。
+        阶段时间线本身仍严格按规则推进，只是位置动画不受它门控。
+        """
         width_m, height_m = self.state_manager._simulation_field_size_m()
-        elapsed = battle_progress * rules.battle_sec
+        elapsed = float(elapsed_sec)
         ids = list(self.state_manager.robot_ids)
         active = set(self.state_manager.active_robot_ids)
         margin = 0.45
@@ -350,10 +359,16 @@ class TGULMatchSimulationEngine(MatchSimulationEngine):
                 )
                 continue
             profile = self._path_profiles[index]
-            rate = math.tau * profile["frequency"] / 90.0
-            theta = elapsed * rate + profile["phase"]
-            x = home["x"] + profile["x_amplitude"] * math.cos(theta)
-            y = home["y"] + profile["y_amplitude"] * math.sin(theta * 0.73)
+            rate = math.tau * profile["frequency"] / self.PATROL_CYCLE_SEC
+            phase = profile["phase"]
+            theta = elapsed * rate + phase
+            # 减掉 t=0 时的偏移，让演示启动瞬间位置正好等于出生点，不会跳一下。
+            x = home["x"] + profile["x_amplitude"] * (
+                math.cos(theta) - math.cos(phase)
+            )
+            y = home["y"] + profile["y_amplitude"] * (
+                math.sin(theta * 0.73) - math.sin(phase * 0.73)
+            )
             dx = -profile["x_amplitude"] * rate * math.sin(theta)
             dy = profile["y_amplitude"] * 0.73 * rate * math.cos(theta * 0.73)
             if abs(dx) + abs(dy) > 1e-9:
@@ -372,10 +387,10 @@ class TGULMatchSimulationEngine(MatchSimulationEngine):
 
     def _apply_current_frame(self, publish_radar):
         # 不伪造旧版的英雄/飞镖/前哨站事件、HP 与雷达数据；位置按 TGUL 场地推进。
-        stage, countdown, elapsed, _, battle_progress = self._timeline_state()
+        stage, countdown, elapsed, _, _battle_progress = self._timeline_state()
         status = self.get_status()
         positions = (
-            self._build_positions(battle_progress)
+            self._build_positions(self._elapsed_sec)
             if self._features.get("positions", True)
             else None
         )
