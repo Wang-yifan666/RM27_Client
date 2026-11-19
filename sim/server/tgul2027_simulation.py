@@ -33,6 +33,13 @@ class TGULStateManager(StateManager):
         # Three robots take the field per team; 4/104 remain registered spares.
         return (1, 3, 7, 101, 103, 107)
 
+    def _simulation_field_size_m(self):
+        """钳制演示帧位置时用真实场地尺寸，而不是父类的 28x15 旧场地。"""
+        config = get_tgul_map(self.tgul_mode)
+        if config["configured"]:
+            return float(config["width_m"]), float(config["height_m"])
+        return super()._simulation_field_size_m()
+
     @staticmethod
     def _role_for(robot_id):
         return {

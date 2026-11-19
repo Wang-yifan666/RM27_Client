@@ -2380,6 +2380,10 @@ class StateManager:
             f"Publish DeployModeStatusSync: team={team_name}, status={1 if int(status) == 1 else 0}",
         )
 
+    def _simulation_field_size_m(self):
+        """演示帧位置钳制使用的场地尺寸（米）；子类按真实场地覆盖。"""
+        return 28.0, 15.0
+
     def get_positions(self):
         with self.lock:
             return [dict(position) for position in self.positions]
@@ -2428,10 +2432,11 @@ class StateManager:
             if positions is not None:
                 if len(positions) != len(self.positions):
                     raise ValueError("simulation position count does not match robot count")
+                field_w, field_h = self._simulation_field_size_m()
                 self.positions = [
                     {
-                        "x": max(0.0, min(28.0, float(position.get("x", 0.0)))),
-                        "y": max(0.0, min(15.0, float(position.get("y", 0.0)))),
+                        "x": max(0.0, min(field_w, float(position.get("x", 0.0)))),
+                        "y": max(0.0, min(field_h, float(position.get("y", 0.0)))),
                         "angle": float(position.get("angle", 0.0)) % 360.0,
                     }
                     for position in positions

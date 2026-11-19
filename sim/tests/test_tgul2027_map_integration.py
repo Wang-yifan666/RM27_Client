@@ -50,6 +50,38 @@ class TGULMapIntegrationTest(unittest.TestCase):
                 self.assertGreaterEqual(pose["y"], 0)
                 self.assertLessEqual(pose["y"], 8)
 
+    def test_simulation_frame_clamps_to_real_field_size(self):
+        """演示帧位置按 12x8 钳制；父类仍保持 28x15 旧行为。"""
+        from server.state_manager import StateManager
+
+        manager = TGULStateManager("tgul_3v3")
+        positions = [dict(pose) for pose in manager.positions]
+        positions[0] = {"x": 20.0, "y": 30.0, "angle": 0.0}
+        manager.apply_match_simulation_frame(
+            positions=positions,
+            robot_health=None,
+            current_stage=0,
+            stage_countdown_sec=0,
+            stage_elapsed_sec=0,
+            simulation_status=None,
+        )
+        self.assertEqual(manager.positions[0]["x"], 12.0)
+        self.assertEqual(manager.positions[0]["y"], 8.0)
+
+        legacy = StateManager()
+        legacy_positions = [dict(pose) for pose in legacy.positions]
+        legacy_positions[0] = {"x": 20.0, "y": 30.0, "angle": 0.0}
+        legacy.apply_match_simulation_frame(
+            positions=legacy_positions,
+            robot_health=None,
+            current_stage=0,
+            stage_countdown_sec=0,
+            stage_elapsed_sec=0,
+            simulation_status=None,
+        )
+        self.assertEqual(legacy.positions[0]["x"], 20.0)
+        self.assertEqual(legacy.positions[0]["y"], 15.0)
+
 
 if __name__ == "__main__":
     unittest.main()

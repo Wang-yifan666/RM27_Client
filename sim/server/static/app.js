@@ -795,6 +795,8 @@ if (!hasSocketIo || !hasVue) {
         // TGUL_MAP_ROUND3
         applyTGULMapData(mode, config, activeIds) {
             if (!mode) return;  // Legacy mode is left unchanged.
+            // 切换模式时清空告警去重表，新一轮问题仍会提示。
+            if (this.tgulMode !== mode) this._tgulMissingWarned = new Set();
             this.tgulMode = mode;
             this.tgulMap = config || null;
             this.tgulActiveRobotIds = Array.isArray(activeIds) ? activeIds.map(Number) : [];
@@ -2699,9 +2701,15 @@ if (!hasSocketIo || !hasVue) {
             (this.positions || []).forEach((pose, index) => {
                 const robotId = Number(this.robotIds[index] ?? index + 1);
                 if (!this.tgulActiveRobotIds.includes(robotId)) return;
-                if (!Number.isFinite(Number(pose.x)) || !Number.isFinite(Number(pose.y))) return;
+                if (!Number.isFinite(Number(pose.x)) || !Number.isFinite(Number(pose.y))) {
+                    this.warnTGULMissingRobot(robotId, pose.x, pose.y, '坐标不是有限数值');
+                    return;
+                }
                 if (pose.x < 0 || pose.x > this.mapWidth ||
-                    pose.y < 0 || pose.y > this.mapHeight) return;
+                    pose.y < 0 || pose.y > this.mapHeight) {
+                    this.warnTGULMissingRobot(robotId, pose.x, pose.y, '超出场地边界');
+                    return;
+                }
                 const pixel = geometry.worldToCanvas(
                     pose.x, pose.y, this.mapWidth, this.mapHeight, w, h
                 );
@@ -2710,6 +2718,17 @@ if (!hasSocketIo || !hasVue) {
                     pixel.x, pixel.y, Number(pose.angle || 0), visual, robotId
                 );
             });
+        },
+        // 掉点不再静默：同一模式内每台机器人只提示一次，避免 10 Hz 刷新刷屏。
+        warnTGULMissingRobot(robotId, x, y, reason) {
+            if (!this._tgulMissingWarned) this._tgulMissingWarned = new Set();
+            const key = `${this.tgulMode}:${robotId}`;
+            if (this._tgulMissingWarned.has(key)) return;
+            this._tgulMissingWarned.add(key);
+            console.warn(
+                `[TGUL] 机器人 ${robotId} 未绘制：${reason}`
+                + `（x=${x}, y=${y}, 场地 ${this.mapWidth}x${this.mapHeight} m）`
+            );
         },
         drawLegacyMinimap() {
             if (!this.ctx) return;
