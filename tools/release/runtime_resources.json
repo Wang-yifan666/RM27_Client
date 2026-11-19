@@ -48,8 +48,6 @@
       "source": "src/widgets/GameResultWidget.cpp",
       "source_root": "resources/images/resultpanel",
       "variants": [
-        "blue_win_zh",
-        "red_win_zh",
         "abnormal_termination_zh"
       ],
       "extensions": [

@@ -36,8 +36,8 @@
       "status": "approved",
       "evidence": "ASSET_LICENSES.md",
       "snapshot": {
-        "file_count": 648,
-        "sha256": "efadba0f6556a824afb8133f25cc9f3353a740d78fe5dc5470f5fc78bf053a7c"
+        "file_count": 385,
+        "sha256": "d66ea514e42e2fccb7268cd4bf909fa64bd0721c67c5ced91e6d0d5137c0075b"
       }
     },
     {
@@ -92,6 +92,15 @@
       "snapshot": {
         "file_count": 3,
         "sha256": "dbd56a32220d7e70e7fa422afe628acaf94dc5113626c90e9bff87ea255690c0"
+      }
+    },
+    {
+      "path": "sim/server/static/tgul_maps",
+      "status": "approved",
+      "evidence": "ASSET_LICENSES.md",
+      "snapshot": {
+        "file_count": 4,
+        "sha256": "937f98261867d7e65fb9faaa6bd6032c709f739acf2ddb2e90dcd13cd9f5ac16"
       }
     }
   ]
