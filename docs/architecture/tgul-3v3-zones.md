@@ -98,6 +98,7 @@
 文件名与位置：`sim/server/static/tgul_maps/tgul_3v3_zones.json`（与 `tgul_3v3.json` 同目录，随静态目录一起提供）。
 
 > 状态：**T1 已实现**。首版只收录有出处的区域，轮廓未提取的一律 `aabb_only`。
+> **T2 已实现**：Python 与 JS 的 `point_in_polygon` 共用 `sim/tests/fixtures/tgul_zone_point_cases.json` 的 23 个用例；边界算命中，洞的边界算洞内。
 
 ```json
 {
@@ -234,7 +235,7 @@
 - 验收：新增单测全绿；`GET /tgul_maps/tgul_3v3_zones.json` 返回 200。
 - **注意**：该文件位于已登记的素材组 `sim/server/static/tgul_maps` 下，新增后会改变该组快照，必须同步更新 `tools/release/public_assets.json` 并跑 `check_public_readiness`，否则 CI 变红。
 
-### T2 — `point_in_polygon`
+### T2 — `point_in_polygon`（已实现）
 
 - Python：`zones.point_in_polygon(x, y, polygon)` 与 `zones.zones_at(x, y)`；边界上的点视为**命中**（约定入内）。
 - JS：`tgul_map_geometry.js` 增加同语义 `pointInPolygon`，供画布侧复用。

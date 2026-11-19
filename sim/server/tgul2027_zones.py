@@ -267,6 +267,76 @@ def load_zones(mode: str) -> dict:
     }
 
 
+_EDGE_EPSILON = 1e-9
+
+
+def _on_segment(x: float, y: float, start, end) -> bool:
+    ax, ay = start
+    bx, by = end
+    length = math.hypot(bx - ax, by - ay)
+    if length <= _EDGE_EPSILON:
+        return abs(x - ax) <= _EDGE_EPSILON and abs(y - ay) <= _EDGE_EPSILON
+    cross = (bx - ax) * (y - ay) - (by - ay) * (x - ax)
+    if abs(cross) > _EDGE_EPSILON * length:
+        return False
+    return (
+        min(ax, bx) - _EDGE_EPSILON <= x <= max(ax, bx) + _EDGE_EPSILON
+        and min(ay, by) - _EDGE_EPSILON <= y <= max(ay, by) + _EDGE_EPSILON
+    )
+
+
+def point_in_ring(x: float, y: float, ring) -> bool:
+    """射线法判定点是否在单个环内；**落在环上的点算命中**。
+
+    边界算内是刻意选择：位置校验时「正好压在区域边上」比「漏判」更安全，
+    洞的边界同理算作洞内，于是紧贴内场边缘的点不会被判成在围墙里。
+    """
+    _require(
+        isinstance(ring, (list, tuple)) and len(ring) >= 3,
+        "ring 至少需要 3 个顶点",
+    )
+    px = _as_number(x, "point.x")
+    py = _as_number(y, "point.y")
+
+    count = len(ring)
+    for index in range(count):
+        if _on_segment(px, py, ring[index], ring[(index + 1) % count]):
+            return True
+
+    inside = False
+    for index in range(count):
+        ax, ay = ring[index]
+        bx, by = ring[(index + 1) % count]
+        if (ay > py) != (by > py):
+            crossing = ax + (py - ay) * (bx - ax) / (by - ay)
+            if px < crossing:
+                inside = not inside
+    return inside
+
+
+def point_in_polygon(x: float, y: float, polygon, holes=()) -> bool:
+    """实心区域判定：在外环内，且不在任何一个洞里。"""
+    if not point_in_ring(x, y, polygon):
+        return False
+    return not any(point_in_ring(x, y, hole) for hole in holes)
+
+
+def zones_at(x: float, y: float, table: dict) -> list[str]:
+    """返回包含该点的 measured 区域 id。
+
+    只查有真实轮廓（polygon）的区域；``aabb_only`` 的包围盒高估了实际占地，
+    不能用来回答「这个点属于哪个区域」。
+    """
+    hits: list[str] = []
+    for zone in table["zones"]:
+        ring = zone["polygon"]
+        if ring is None:
+            continue
+        if point_in_polygon(x, y, ring, zone["holes"]):
+            hits.append(zone["id"])
+    return hits
+
+
 def zone_by_id(table: dict, zone_id: str) -> dict | None:
     for zone in table["zones"]:
         if zone["id"] == zone_id:

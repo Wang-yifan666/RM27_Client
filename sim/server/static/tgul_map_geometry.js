@@ -47,5 +47,58 @@
         };
     }
 
-    return { view, worldToCanvas, canvasToWorld };
+    // 与 Python 端 tgul2027_zones.point_in_ring 同语义：射线法，边界算命中。
+    const EDGE_EPSILON = 1e-9;
+
+    function onSegment(px, py, start, end) {
+        const ax = Number(start[0]);
+        const ay = Number(start[1]);
+        const bx = Number(end[0]);
+        const by = Number(end[1]);
+        const length = Math.hypot(bx - ax, by - ay);
+        if (length <= EDGE_EPSILON) {
+            return Math.abs(px - ax) <= EDGE_EPSILON && Math.abs(py - ay) <= EDGE_EPSILON;
+        }
+        const cross = (bx - ax) * (py - ay) - (by - ay) * (px - ax);
+        if (Math.abs(cross) > EDGE_EPSILON * length) return false;
+        return px >= Math.min(ax, bx) - EDGE_EPSILON
+            && px <= Math.max(ax, bx) + EDGE_EPSILON
+            && py >= Math.min(ay, by) - EDGE_EPSILON
+            && py <= Math.max(ay, by) + EDGE_EPSILON;
+    }
+
+    function pointInRing(x, y, ring) {
+        if (!Array.isArray(ring) || ring.length < 3) {
+            throw new RangeError('ring needs at least three vertices');
+        }
+        const px = Number(x);
+        const py = Number(y);
+        if (!Number.isFinite(px) || !Number.isFinite(py)) {
+            throw new RangeError('point coordinates must be finite');
+        }
+        const count = ring.length;
+        for (let i = 0; i < count; i += 1) {
+            if (onSegment(px, py, ring[i], ring[(i + 1) % count])) return true;
+        }
+        let inside = false;
+        for (let i = 0; i < count; i += 1) {
+            const ax = Number(ring[i][0]);
+            const ay = Number(ring[i][1]);
+            const bx = Number(ring[(i + 1) % count][0]);
+            const by = Number(ring[(i + 1) % count][1]);
+            if ((ay > py) !== (by > py)) {
+                const crossing = ax + ((py - ay) * (bx - ax)) / (by - ay);
+                if (px < crossing) inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    // 实心区域：在外环内且不在任何洞内；洞的边界算作洞内。
+    function pointInPolygon(x, y, polygon, holes = []) {
+        if (!pointInRing(x, y, polygon)) return false;
+        return !holes.some(hole => pointInRing(x, y, hole));
+    }
+
+    return { view, worldToCanvas, canvasToWorld, pointInRing, pointInPolygon };
 }));

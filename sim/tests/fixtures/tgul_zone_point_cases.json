@@ -1,0 +1,37 @@
+{
+  "note": "Python(tgul2027_zones.point_in_polygon) 与 JS(tgul_map_geometry.pointInPolygon) 必须给出相同结果。边界算命中；洞的边界算洞内。",
+  "square": [[0.0, 0.0], [4.0, 0.0], [4.0, 4.0], [0.0, 4.0]],
+  "lshape": [[0.0, 0.0], [4.0, 0.0], [4.0, 2.0], [2.0, 2.0], [2.0, 4.0], [0.0, 4.0]],
+  "triangle": [[0.0, 0.0], [4.0, 0.0], [0.0, 4.0]],
+  "wall_outer": [[-0.3, -0.3], [12.3, -0.3], [12.3, 8.3], [-0.3, 8.3]],
+  "wall_hole": [[0.0, 0.0], [0.0, 8.0], [12.0, 8.0], [12.0, 0.0]],
+  "cases": [
+    { "name": "square/center", "shape": "square", "point": [2.0, 2.0], "inside": true },
+    { "name": "square/vertex", "shape": "square", "point": [0.0, 0.0], "inside": true },
+    { "name": "square/edge-bottom", "shape": "square", "point": [2.0, 0.0], "inside": true },
+    { "name": "square/edge-right", "shape": "square", "point": [4.0, 2.0], "inside": true },
+    { "name": "square/outside-left", "shape": "square", "point": [-0.01, 2.0], "inside": false },
+    { "name": "square/outside-right", "shape": "square", "point": [4.01, 2.0], "inside": false },
+    { "name": "square/outside-corner", "shape": "square", "point": [4.01, 4.01], "inside": false },
+
+    { "name": "lshape/vertical-arm", "shape": "lshape", "point": [1.0, 3.0], "inside": true },
+    { "name": "lshape/horizontal-arm", "shape": "lshape", "point": [3.0, 1.0], "inside": true },
+    { "name": "lshape/notch-center", "shape": "lshape", "point": [3.0, 3.0], "inside": false },
+    { "name": "lshape/notch-edge", "shape": "lshape", "point": [2.0, 3.0], "inside": true },
+
+    { "name": "triangle/inside", "shape": "triangle", "point": [1.0, 1.0], "inside": true },
+    { "name": "triangle/hypotenuse-edge", "shape": "triangle", "point": [2.0, 2.0], "inside": true },
+    { "name": "triangle/outside", "shape": "triangle", "point": [2.1, 2.1], "inside": false },
+
+    { "name": "wall/field-center-is-hole", "shape": "wall", "point": [6.0, 4.0], "inside": false },
+    { "name": "wall/west-strip", "shape": "wall", "point": [-0.15, 4.0], "inside": true },
+    { "name": "wall/east-strip", "shape": "wall", "point": [12.15, 4.0], "inside": true },
+    { "name": "wall/south-west-corner", "shape": "wall", "point": [-0.15, -0.15], "inside": true },
+    { "name": "wall/inner-edge-counts-as-hole", "shape": "wall", "point": [0.0, 4.0], "inside": false },
+    { "name": "wall/inner-east-edge", "shape": "wall", "point": [12.0, 4.0], "inside": false },
+    { "name": "wall/outer-edge-counts-as-wall", "shape": "wall", "point": [-0.3, 4.0], "inside": true },
+    { "name": "wall/outside-outer", "shape": "wall", "point": [12.35, 4.0], "inside": false },
+
+    { "name": "field/bottom-left", "shape": "square", "point": [0.0, 0.0], "inside": true }
+  ]
+}

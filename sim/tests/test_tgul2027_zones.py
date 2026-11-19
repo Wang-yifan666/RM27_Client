@@ -216,5 +216,69 @@ class ZoneValidationTest(unittest.TestCase):
         self._assert_rejected(mutate, message="重复 id")
 
 
+FIXTURE_PATH = Path(__file__).resolve().parent / "fixtures" / "tgul_zone_point_cases.json"
+
+
+class PointInPolygonTest(unittest.TestCase):
+    """与 JS 端共用同一份用例，保证两处语义一致。"""
+
+    def setUp(self):
+        self.data = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+        self.shapes = {
+            key: value for key, value in self.data.items()
+            if isinstance(value, list)
+        }
+
+    def test_shared_cases_match_expected(self):
+        cases = self.data["cases"]
+        self.assertGreaterEqual(len(cases), 20)
+        for case in cases:
+            with self.subTest(case=case["name"]):
+                x, y = case["point"]
+                if case["shape"] == "wall":
+                    inside = zones.point_in_polygon(
+                        x, y,
+                        self.shapes["wall_outer"],
+                        [self.shapes["wall_hole"]],
+                    )
+                else:
+                    inside = zones.point_in_polygon(
+                        x, y, self.shapes[case["shape"]]
+                    )
+                self.assertEqual(inside, case["inside"])
+
+    def test_degenerate_inputs_raise(self):
+        with self.assertRaises(ValueError):
+            zones.point_in_polygon(1.0, 1.0, [[0.0, 0.0], [1.0, 1.0]])
+        with self.assertRaises(ValueError):
+            zones.point_in_polygon(
+                float("nan"), 1.0, self.shapes["square"]
+            )
+        with self.assertRaises(ValueError):
+            zones.point_in_polygon(
+                1.0, float("inf"), self.shapes["square"]
+            )
+
+    def test_zones_at_only_uses_outlined_zones(self):
+        table = zones.load_zones("tgul_3v3")
+        self.assertEqual(
+            zones.zones_at(6.0, 4.0, table),
+            ["field.inner", "control.central"],
+        )
+        # 高地在 (8.5, 3.0) 的包围盒内，但只有 aabb 没有轮廓，不得命中
+        self.assertEqual(zones.zones_at(8.5, 3.0, table), ["field.inner"])
+        # 隧道薄面有真实轮廓，应该命中
+        self.assertEqual(
+            zones.zones_at(8.5, 0.5, table),
+            ["field.inner", "terrain.tunnel_se"],
+        )
+        # 围墙上：在内场之外，只命中围墙
+        self.assertEqual(
+            zones.zones_at(-0.15, 4.0, table),
+            ["obstacle.perimeter_wall"],
+        )
+        self.assertEqual(zones.zones_at(-1.0, 4.0, table), [])
+
+
 if __name__ == "__main__":
     unittest.main()

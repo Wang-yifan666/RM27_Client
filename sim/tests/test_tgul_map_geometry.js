@@ -50,3 +50,34 @@ test('invalid sizes and padding fail early', () => {
         assert.throws(() => m.view(...values), RangeError);
     }
 });
+
+const fs = require('node:fs');
+const path = require('node:path');
+
+const zoneFixture = JSON.parse(
+    fs.readFileSync(
+        path.join(__dirname, 'fixtures', 'tgul_zone_point_cases.json'), 'utf8'
+    )
+);
+
+test('shared zone point cases match the Python expectations', () => {
+    const shapes = {};
+    for (const [key, value] of Object.entries(zoneFixture)) {
+        if (Array.isArray(value)) shapes[key] = value;
+    }
+    assert.ok(zoneFixture.cases.length >= 20);
+    for (const item of zoneFixture.cases) {
+        const inside = item.shape === 'wall'
+            ? m.pointInPolygon(item.point[0], item.point[1],
+                shapes.wall_outer, [shapes.wall_hole])
+            : m.pointInPolygon(item.point[0], item.point[1], shapes[item.shape]);
+        assert.equal(inside, item.inside, item.name);
+    }
+});
+
+test('degenerate rings and non-finite points throw', () => {
+    const square = [[0, 0], [4, 0], [4, 4], [0, 4]];
+    assert.throws(() => m.pointInPolygon(1, 1, [[0, 0], [1, 1]]), RangeError);
+    assert.throws(() => m.pointInPolygon(NaN, 1, square), RangeError);
+    assert.throws(() => m.pointInPolygon(1, Infinity, square), RangeError);
+});
