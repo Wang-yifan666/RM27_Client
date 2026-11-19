@@ -100,5 +100,57 @@
         return !holes.some(hole => pointInRing(x, y, hole));
     }
 
-    return { view, worldToCanvas, canvasToWorld, pointInRing, pointInPolygon };
+    // 与 Python 端 tgul2027_zones.classify_position 同语义。
+    // 只有 blocks_motion === true 的区域会拒绝位置；aabb_only 区域只提示不拦。
+    function classifyPosition(x, y, table) {
+        const result = {
+            valid: true,
+            reason: '',
+            blockingZones: [],
+            zones: [],
+            unverifiedZones: []
+        };
+        const px = Number(x);
+        const py = Number(y);
+        if (!Number.isFinite(px) || !Number.isFinite(py)) {
+            result.valid = false;
+            result.reason = '坐标不是有限数值';
+            return result;
+        }
+        if (!table || !table.coordinate_system || !Array.isArray(table.zones)) {
+            return result;  // 没有区域数据时退回调用方的场地矩形校验
+        }
+        const frame = table.coordinate_system.frame;
+        const eps = 1e-9;
+        if (px < frame[0] - eps || px > frame[2] + eps
+            || py < frame[1] - eps || py > frame[3] + eps) {
+            result.valid = false;
+            result.reason = '超出场地边界';
+            return result;
+        }
+        for (const zone of table.zones) {
+            if (Array.isArray(zone.polygon)) {
+                const inside = pointInPolygon(px, py, zone.polygon, zone.holes || []);
+                if (inside) {
+                    result.zones.push(zone.id);
+                    if (zone.blocks_motion === true) result.blockingZones.push(zone.id);
+                }
+            } else if (Array.isArray(zone.aabb)) {
+                const [x0, y0, x1, y1] = zone.aabb;
+                if (px >= x0 && px <= x1 && py >= y0 && py <= y1) {
+                    result.unverifiedZones.push(zone.id);
+                }
+            }
+        }
+        if (result.blockingZones.length) {
+            result.valid = false;
+            result.reason = `落在障碍物 ${result.blockingZones.join('、')}`;
+        }
+        return result;
+    }
+
+    return {
+        view, worldToCanvas, canvasToWorld,
+        pointInRing, pointInPolygon, classifyPosition
+    };
 }));

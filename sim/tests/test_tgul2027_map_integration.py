@@ -82,6 +82,25 @@ class TGULMapIntegrationTest(unittest.TestCase):
         self.assertEqual(legacy.positions[0]["x"], 20.0)
         self.assertEqual(legacy.positions[0]["y"], 15.0)
 
+    def test_blocked_zone_rejects_position_but_open_field_passes(self):
+        """set_robot_position 接入区域判定：只有实测障碍才拒绝。"""
+        import copy
+        from unittest.mock import patch
+
+        from server import tgul2027_simulation as simulation
+        from server import tgul2027_zones as zone_module
+
+        table = copy.deepcopy(zone_module.load_zones("tgul_3v3"))
+        zone_module.zone_by_id(table, "control.central")["blocks_motion"] = True
+
+        manager = TGULStateManager("tgul_3v3")
+        index = manager.robot_ids.index(3)
+        with patch.object(simulation, "load_zones_cached", return_value=table):
+            self.assertFalse(manager.set_robot_position(index, 6.0, 4.0, 0.0))
+            self.assertTrue(manager.set_robot_position(index, 1.0, 1.0, 0.0))
+            # 只有包围盒的高地仍然放行
+            self.assertTrue(manager.set_robot_position(index, 8.5, 3.0, 0.0))
+
 
 if __name__ == "__main__":
     unittest.main()

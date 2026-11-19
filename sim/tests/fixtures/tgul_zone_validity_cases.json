@@ -1,0 +1,15 @@
+{
+  "note": "Python(tgul2027_zones.classify_position) 与 JS(tgul_map_geometry.classifyPosition) 必须一致。unverified 表示是否落在只有包围盒的待测量区域（只提示、不拦截）。当前场地内没有已测量的障碍物，因此 blocked 分支由临时 fixture 覆盖，不在这份真实数据用例里。",
+  "cases": [
+    { "name": "center/plain", "point": [6.0, 4.0], "valid": true, "unverified": false },
+    { "name": "corner/12-8", "point": [12.0, 8.0], "valid": true, "unverified": false },
+    { "name": "edge/left-field-line", "point": [0.0, 4.0], "valid": true, "unverified": false },
+    { "name": "edge/bottom-field-line", "point": [4.0, 0.0], "valid": true, "unverified": false },
+    { "name": "plain/south-west", "point": [4.0, 1.0], "valid": true, "unverified": false },
+    { "name": "highland-se/aabb", "point": [8.5, 3.0], "valid": true, "unverified": true },
+    { "name": "supply-and-spawn-nw/aabb", "point": [1.0, 7.0], "valid": true, "unverified": true },
+    { "name": "out-of-frame/right", "point": [12.01, 4.0], "valid": false, "unverified": false },
+    { "name": "out-of-frame/top", "point": [6.0, 8.01], "valid": false, "unverified": false },
+    { "name": "out-of-frame/wall-strip", "point": [-0.15, 4.0], "valid": false, "unverified": false }
+  ]
+}

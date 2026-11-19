@@ -280,5 +280,60 @@ class PointInPolygonTest(unittest.TestCase):
         self.assertEqual(zones.zones_at(-1.0, 4.0, table), [])
 
 
+VALIDITY_FIXTURE = (
+    Path(__file__).resolve().parent / "fixtures" / "tgul_zone_validity_cases.json"
+)
+
+
+class ClassifyPositionTest(unittest.TestCase):
+    """坐标可用性判定，与 JS 端共用同一份用例。"""
+
+    def setUp(self):
+        self.table = zones.load_zones("tgul_3v3")
+        self.cases = json.loads(
+            VALIDITY_FIXTURE.read_text(encoding="utf-8")
+        )["cases"]
+
+    def test_shared_validity_cases(self):
+        self.assertGreaterEqual(len(self.cases), 8)
+        for case in self.cases:
+            with self.subTest(case=case["name"]):
+                got = zones.classify_position(*case["point"], self.table)
+                self.assertEqual(got["valid"], case["valid"])
+                self.assertEqual(
+                    bool(got["unverified_zones"]), case["unverified"]
+                )
+
+    def test_center_reports_containing_zones(self):
+        got = zones.classify_position(6.0, 4.0, self.table)
+        self.assertTrue(got["valid"])
+        self.assertEqual(got["zones"], ["field.inner", "control.central"])
+        self.assertEqual(got["blocking_zones"], [])
+
+    def test_non_finite_point_is_invalid_not_raising(self):
+        got = zones.classify_position(float("nan"), 4.0, self.table)
+        self.assertFalse(got["valid"])
+        self.assertEqual(got["reasons"][0]["code"], "not_finite")
+
+    def test_out_of_frame_reports_code(self):
+        got = zones.classify_position(12.5, 4.0, self.table)
+        self.assertFalse(got["valid"])
+        self.assertEqual(got["reasons"][0]["code"], "out_of_frame")
+
+    def test_measured_obstacle_rejects(self):
+        table = copy.deepcopy(self.table)
+        zones.zone_by_id(table, "control.central")["blocks_motion"] = True
+        got = zones.classify_position(6.0, 4.0, table)
+        self.assertFalse(got["valid"])
+        self.assertEqual(got["blocking_zones"], ["control.central"])
+        self.assertEqual(got["reasons"][-1]["code"], "blocked")
+
+    def test_aabb_only_zone_warns_without_blocking(self):
+        got = zones.classify_position(8.5, 3.0, self.table)
+        self.assertTrue(got["valid"])
+        self.assertIn("terrain.highland_se", got["unverified_zones"])
+        self.assertEqual(got["blocking_zones"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

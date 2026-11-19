@@ -337,6 +337,84 @@ def zones_at(x: float, y: float, table: dict) -> list[str]:
     return hits
 
 
+_ZONE_CACHE: dict[str, dict] = {}
+
+
+def load_zones_cached(mode: str) -> dict:
+    """进程内只读一次。
+
+    区域表是随源码发布的静态数据，运行期不会变；缓存避免每次拖拽都读盘。
+    需要按环境重新读取时调用 ``load_zones()``。
+    """
+    key = str(getattr(mode, "value", mode))
+    if key not in _ZONE_CACHE:
+        _ZONE_CACHE[key] = load_zones(key)
+    return _ZONE_CACHE[key]
+
+
+def classify_position(x: float, y: float, table: dict) -> dict:
+    """判定一个坐标是否可用。
+
+    规则（与 docs/architecture/tgul-3v3-zones.md 第 4 节一致）：
+    - 只有 ``blocks_motion is True`` 的区域才会拒绝位置；
+    - ``aabb_only`` / ``pending`` 区域一律不拒绝，只进 ``unverified_zones`` 供上层提示；
+    - 场地矩形的边界算作场内。
+    """
+    result = {
+        "valid": True,
+        "reasons": [],
+        "blocking_zones": [],
+        "zones": [],
+        "unverified_zones": [],
+    }
+    try:
+        px = _as_number(x, "x")
+        py = _as_number(y, "y")
+    except ValueError:
+        result["valid"] = False
+        result["reasons"].append(
+            {"code": "not_finite", "detail": "坐标不是有限数值"}
+        )
+        return result
+
+    frame = table["frame"]
+    if not (
+        frame[0] - _EDGE_EPSILON <= px <= frame[2] + _EDGE_EPSILON
+        and frame[1] - _EDGE_EPSILON <= py <= frame[3] + _EDGE_EPSILON
+    ):
+        result["valid"] = False
+        result["reasons"].append(
+            {
+                "code": "out_of_frame",
+                "detail": f"({px}, {py}) 超出场地 {frame}",
+            }
+        )
+
+    for zone in table["zones"]:
+        ring = zone["polygon"]
+        if ring is not None:
+            if point_in_polygon(px, py, ring, zone["holes"]):
+                result["zones"].append(zone["id"])
+                if zone["blocks_motion"] is True:
+                    result["blocking_zones"].append(zone["id"])
+            continue
+        box = zone["aabb"]
+        if box is not None:
+            # 仅用于提示：包围盒高估实际占地，不参与有效/无效判定。
+            if box[0] <= px <= box[2] and box[1] <= py <= box[3]:
+                result["unverified_zones"].append(zone["id"])
+
+    if result["blocking_zones"]:
+        result["valid"] = False
+        result["reasons"].append(
+            {
+                "code": "blocked",
+                "detail": "落在障碍物 " + "、".join(result["blocking_zones"]),
+            }
+        )
+    return result
+
+
 def zone_by_id(table: dict, zone_id: str) -> dict | None:
     for zone in table["zones"]:
         if zone["id"] == zone_id:

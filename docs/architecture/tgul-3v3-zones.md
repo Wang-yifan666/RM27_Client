@@ -99,6 +99,10 @@
 
 > 状态：**T1 已实现**。首版只收录有出处的区域，轮廓未提取的一律 `aabb_only`。
 > **T2 已实现**：Python 与 JS 的 `point_in_polygon` 共用 `sim/tests/fixtures/tgul_zone_point_cases.json` 的 23 个用例；边界算命中，洞的边界算洞内。
+> **T3 已实现**：`classify_position` 只有 `blocks_motion: true` 才拒绝位置，
+> `aabb_only` 区域只提示不拦截；两端共用 `tgul_zone_validity_cases.json` 的 10 个用例。
+> 服务端在 `set_robot_position()` 做最终判定，前端 `onDrag` 给即时反馈。
+> 当前场地内没有已测量的障碍物，因此 valid 实际等价于「在场地矩形内」。
 
 ```json
 {
@@ -242,7 +246,7 @@
 - 测试：凸多边形、凹多边形、顶点、边上、外部、跨日界线式的退化输入；Python 与 JS 用**同一组用例和期望值**，保证两端语义一致。
 - 验收：两端用例通过；无 `measured` 区域的坐标不会被误判为内部。
 
-### T3 — 无效位置检测
+### T3 — 无效位置检测（已实现）
 
 - 新增 `zones.classify_position(x, y)` → `{"valid": bool, "reasons": [...], "unknown_zones": [...]}`。
 - 接入点：`TGULStateManager.set_robot_position()`（服务端最终判定）与前端 `onDrag`（先本地提示）。

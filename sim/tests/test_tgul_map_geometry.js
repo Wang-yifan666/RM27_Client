@@ -81,3 +81,40 @@ test('degenerate rings and non-finite points throw', () => {
     assert.throws(() => m.pointInPolygon(NaN, 1, square), RangeError);
     assert.throws(() => m.pointInPolygon(1, Infinity, square), RangeError);
 });
+
+const zoneTable = JSON.parse(
+    fs.readFileSync(
+        path.join(__dirname, '..', 'server', 'static', 'tgul_maps',
+            'tgul_3v3_zones.json'),
+        'utf8'
+    )
+);
+const validityFixture = JSON.parse(
+    fs.readFileSync(
+        path.join(__dirname, 'fixtures', 'tgul_zone_validity_cases.json'),
+        'utf8'
+    )
+);
+
+test('shared zone validity cases match the Python expectations', () => {
+    assert.ok(validityFixture.cases.length >= 8);
+    for (const item of validityFixture.cases) {
+        const got = m.classifyPosition(item.point[0], item.point[1], zoneTable);
+        assert.equal(got.valid, item.valid, item.name);
+        assert.equal(
+            got.unverifiedZones.length > 0, item.unverified, item.name
+        );
+    }
+});
+
+test('aabb-only zones warn but never block', () => {
+    const got = m.classifyPosition(8.5, 3.0, zoneTable);
+    assert.equal(got.valid, true);
+    assert.ok(got.unverifiedZones.includes('terrain.highland_se'));
+    assert.deepEqual(got.blockingZones, []);
+});
+
+test('classifyPosition tolerates a missing table', () => {
+    assert.equal(m.classifyPosition(6, 4, null).valid, true);
+    assert.equal(m.classifyPosition(NaN, 4, null).valid, false);
+});

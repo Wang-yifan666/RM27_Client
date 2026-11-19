@@ -533,6 +533,7 @@ if (!hasSocketIo || !hasVue) {
         tgulActiveRobotIds: [],
         tgulImageStyles: [],
         tgulImageStyle: '',
+        tgulZones: null,
         videos: [],
         selectedVideo: '',
         customVideoUrl: '',
@@ -799,6 +800,7 @@ if (!hasSocketIo || !hasVue) {
             if (this.tgulMode !== mode) this._tgulMissingWarned = new Set();
             this.tgulMode = mode;
             this.tgulMap = config || null;
+            this.ensureTGULZones();
             this.tgulActiveRobotIds = Array.isArray(activeIds) ? activeIds.map(Number) : [];
             if (config && config.configured) {
                 this.mapWidth = Number(config.width_m);
@@ -820,6 +822,20 @@ if (!hasSocketIo || !hasVue) {
                 this.tgulImageStyles = styles;
                 this.setTGULMapImage(this.resolveTGULMapImageUrl(config));
             }
+        },
+        // 区域表是静态文件，进入某个模式时拉一次；失败就退化成只校验场地矩形。
+        ensureTGULZones() {
+            if (this._tgulZonesMode === this.tgulMode) return;
+            this._tgulZonesMode = this.tgulMode;
+            const mode = this.tgulMode;
+            fetch(`/tgul_maps/${mode}_zones.json`)
+                .then(response => (response.ok ? response.json() : null))
+                .then(data => {
+                    if (this.tgulMode === mode) this.tgulZones = data;
+                })
+                .catch(() => {
+                    if (this.tgulMode === mode) this.tgulZones = null;
+                });
         },
         // 操作手上次选过的风格优先，其次是服务端默认值，最后退回第一项。
         resolveTGULMapImageUrl(config) {
@@ -2843,6 +2859,20 @@ if (!hasSocketIo || !hasVue) {
                 this.canvas.width, this.canvas.height
             );
             if (!field.inside) return;  // No dragging into aspect-ratio margins.
+            // 服务端才是最终判定；这里先给操作手即时反馈，避免拖进墙里又被弹回。
+            const geometry = window.TGULMapGeometry;
+            const verdict = geometry && geometry.classifyPosition
+                ? geometry.classifyPosition(field.x, field.y, this.tgulZones)
+                : null;
+            if (verdict) {
+                if (!verdict.valid) {
+                    this.simulationUiMessage = `目标位置无效：${verdict.reason}`;
+                    return;
+                }
+                this.simulationUiMessage = verdict.unverifiedZones.length
+                    ? `注意：该位置落在待测量区域（${verdict.unverifiedZones.join('、')}），暂按放行处理`
+                    : '';
+            }
             const index = this.draggingRobot;
             if (!this.positions[index] ||
                 !this.tgulActiveRobotIds.includes(Number(this.robotIds[index]))) return;

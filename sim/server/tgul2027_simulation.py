@@ -10,6 +10,9 @@ import threading
 from server.match_simulation_engine import MatchSimulationEngine
 from server.state_manager import StateManager
 from server.tgul2027_map import get_tgul_map, initial_demo_positions
+from server.tgul2027_zones import (
+    classify_position, load_zones_cached,
+)
 from server.tgul2027_rules import (
     MatchMode, MatchStage, RobotRole, THREE_V_THREE_ROBOT_IDS,
     get_match_rules, get_robot_specs, stage_at,
@@ -234,6 +237,14 @@ class TGULStateManager(StateManager):
         if angle_num is not None and not math.isfinite(angle_num):
             return False
         if not (0 <= px <= cfg["width_m"] and 0 <= py <= cfg["height_m"]):
+            return False
+        # 区域数据可用时以它为准（只有真实轮廓的障碍才会拒绝位置）；
+        # 数据缺失时退回上面的矩形边界判定，不阻断现有流程。
+        try:
+            verdict = classify_position(px, py, load_zones_cached(self.tgul_mode))
+        except ValueError:
+            verdict = None
+        if verdict is not None and not verdict["valid"]:
             return False
         super().set_robot_position(idx, px, py, angle_num)
         return True
