@@ -125,10 +125,6 @@
                                 {{ isMapFullscreen ? '退出全屏' : '⛶ 地图全屏' }}
                             </button>
                         </div>
-                        <div class="minimap-container">
-                            <canvas id="minimapCanvas" class="simulation-map-canvas" width="800" height="450"
-                                @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag" @mouseleave="stopDrag"></canvas>
-                        </div>
                         <div v-if="tgulMode || simulationManualOverride" class="minimap-hint-row">
                             <span v-if="tgulMode" class="minimap-hint">TGUL {{ tgulMode }} · {{ mapWidth }}×{{ mapHeight }} m</span>
                             <label v-if="tgulMode && tgulImageStyles.length > 1" class="minimap-hint minimap-style-picker">
@@ -138,6 +134,10 @@
                                 </select>
                             </label>
                             <span v-if="simulationManualOverride" class="minimap-hint manual-override">已手动接管，点击“继续”恢复演示</span>
+                        </div>
+                        <div class="minimap-container">
+                            <canvas id="minimapCanvas" class="simulation-map-canvas" width="800" height="450"
+                                @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag" @mouseleave="stopDrag"></canvas>
                         </div>
                     </div>
 
